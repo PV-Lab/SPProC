@@ -9,14 +9,6 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib
-#import datetime
-
-#from numpy.random import seed
-
-#import ternary
-#import pickle
-#import datetime
-#import sys
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.tri as tri
@@ -38,11 +30,6 @@ def triangleplot(surf_points, surf_data, norm, surf_axis_scale = 1, cmap = 'RdBu
     mpl.rcParams.update({'font.sans-serif': 'Arial', 'font.family': 'sans-serif'})
     
     
-    #test_data = np.concatenate((surf_points, surf_data), axis=1)
-    # barycentric coords: (a,b,c)
-    #b=test_data[:,0]
-    #c=test_data[:,1]
-    #a=test_data[:,2]
     b=surf_points[:,0]
     c=surf_points[:,1]
     a=surf_points[:,2]
@@ -70,7 +57,6 @@ def triangleplot(surf_points, surf_data, norm, surf_axis_scale = 1, cmap = 'RdBu
         T_p = tri.Triangulation(x_p,y_p)
 
         im3 = ax.scatter(x_p, y_p, s=8, c=scatter_color, cmap=cmap, edgecolors='black', linewidths=.5, alpha=1, zorder=2, norm=norm)
-    #print('y new is: ', y[0, 5000, 10000])
     # plot the contour
     if surf_levels is not None:
         im=ax.tricontourf(x,y,T.triangles,v, cmap=cmap, levels=surf_levels)
@@ -146,7 +132,6 @@ def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
         np.linspace(0.0, midpoint, 128, endpoint=False), #128, endpoint=False), 
         np.linspace(midpoint, 0.3, 80, endpoint=False),
         np.linspace(0.3, 1.0, 49, endpoint=True)
-        #np.linspace(midpoint, 1.0, 129, endpoint=True)#129, endpoint=True)
     ])
 
     for ri, si in zip(reg_index, shift_index):
@@ -168,8 +153,6 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
     a = np.arange(0.0,1.0, 0.005)
     xt, yt, zt = np.meshgrid(a,a,a, sparse=False)
     points = np.transpose([xt.ravel(), yt.ravel(), zt.ravel()])
-    #points = points[~np.equal(np.sum(points, axis=1)>1, 1)]
-    #points = points[np.equal(np.sum(points, axis=1),1)]
     points = points[abs(np.sum(points, axis=1)-1)<0.005]
     
     posterior_mean = [None for k in range(rounds)]
@@ -182,12 +165,11 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
     for i in range(rounds):
         suggestion_df[i].to_csv('Bayesian_suggestion_round_'+str(i)+'.csv', float_format='%.3f')
         inputs = compositions_input[i]
-        #if i>0: # For the next line
         inputs['Merit'] = degradation_input[i]['Merit']
         inputs=inputs.sort_values('Merit')
         inputs=inputs.drop(columns=['Unnamed: 0'])
-        inputs.to_csv('Bayesian_inputs_round_'+str(i)+'.csv', float_format='%.3f')
-        ### TO DO!: Here the posterior mean and std_dv+acquisition function are calculated and saved to csvs.
+        inputs.to_csv(results_dir + 'Model_inputs_round_'+str(i)+'.csv', float_format='%.3f')
+        # : Here the posterior mean and std_dv+acquisition function are calculated and saved to csvs.
         posterior_mean[i],posterior_std[i] = BO_batch[i].model.predict(points) # MAKING THE PREDICTION
         # Scaling the normalized data back to the original units.
         posterior_mean[i] = posterior_mean[i]*Y_step[i].std()+Y_step[i].mean()
@@ -200,7 +182,7 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
         inputs2['Posterior mean (a.u.)']=posterior_mean[i]
         inputs2['Posterior std (a.u.)']=posterior_std[i]
         inputs2['Aqcuisition (a.u.)']=acq_normalized[i]
-        inputs2.to_csv('Model_descriptors_round_' + str(i) + '.csv', float_format='%.3f')
+        inputs2.to_csv(results_dir + 'Model_round_' + str(i) + '.csv', float_format='%.3f')
         
     
     

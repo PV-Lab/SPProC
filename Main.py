@@ -1,21 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Mar 17 18:30:35 2019
-
-Code to run Batched Bayesian Optimization with GPyOpt
-
-@author: Felipe Oviedo
-
-#######Version 1.3 - 
-## Performs calculations for BO Round 2 and 3
-
-#Changes implemented compared to V 1.2
-# Adds second round, without modificaitons to Class RBG_data
-# Adds cutoff to object instantiation, it is the last time to be considered
-    #to avoid problems with diverse time-scales.
-# Axes limits hardcoded within class, at the moment 
-
-"""
 
 #Libraries: seaborn, scipy, pandas, Python 3.XX and GPyOpt are required
 import pandas as pd
@@ -37,9 +19,6 @@ from RGB_data import RGB_data
 from plotting_v2 import triangleplot
 from plotting_v2 import plotBO
 
-#import GPyOpt.methods.bayesian_optimization as te # import BayesianOptimization GPyOpt.methods
-
-# TO DO: Formulate to something more resilient.
 def tolerance_factor(suggestion_df = None, tolerance_factor_bound = None):
     if (suggestion_df is not None and tolerance_factor_bound is None):
         # Calculate the tolerance factor for the given dataframe of suggestions.
@@ -132,16 +111,6 @@ for k in range(rounds):
     mean_RGB[k] = RGB_data(folders[k], df_compositions[k].get("Sample"), cutoff, is_calibrated, is_rgb)
     #Get dataframes with sample as level
     red[k], blue[k], green[k], times[k]= mean_RGB[k].preprocess()
-    #Be careful with normalization, as batch-to-batch will have different normalized values...
-    #red[k], blue[k], green[k]= mean_RGB[k].preprocess(normalize = 'min_max')
-    #red[k], blue[k], green[k]= mean_RGB[k].preprocess('max')
-
-
-    #Plot data in different plots using seaborn
-    #mean_RGB[k].plot_samples('green')
-    #mean_RGB[k].plot_samples('blue')
-    #mean_RGB[k].plot_samples('red')
-    #mean_RGB[k].plot_samples('all')
     
     #Compute figure-of-merit, returns dataframe with figure of merit
     merit_area[k] = mean_RGB[k].compute_degradation(method = 'area')
@@ -160,12 +129,7 @@ for k in range(rounds):
     #Creating dataframe to report comparison between methods
     merit_diff[k] = merit_diff[k][~merit_diff[k]['Sample'].astype(str).str.contains(indicator_for_empty)]
     merit_inv_moment[k] = merit_inv_moment[k][~merit_inv_moment[k]['Sample'].astype(str).str.contains(indicator_for_empty)]
-    #merit_dtw[k] = merit_dtw[k][~merit_dtw[k]['Sample'].astype(str).str.contains(indicator_for_empty)]
     merit_area[k] = merit_area[k][~merit_area[k]['Sample'].astype(str).str.contains(indicator_for_empty)]
-    #report_df = pd.concat([merit_diff['Total'], merit_inv_moment['Total'], merit_dtw['Total'], merit_area['Total']], axis=1, keys=['Area Difference', 'Inverse Moment', 'DTW', 'Area'])
-    #report_df['Sample'] = merit_dtw['Sample']
-    
-    #mean_RGB[k].plot_samples('all')
 
 os.chdir(original_folder)
 
@@ -208,43 +172,25 @@ for k in range(rounds):
     constraints[k] = [{'name': 'constr_1', 'constraint': 'x[:,0] +x[:,1] + x[:,2] - ' + str(composition_total[1])},
                    {'name': 'constr_2', 'constraint': str(composition_total[0])+'-x[:,0] -x[:,1] - x[:,2] '},
                    {'name': 'constr_3', 'constraint': tolerance_factor_function}]
-
-    '''
-    #Define X as a series of compositions. 
-    X_rounds[k] = compositions_input[k][materials].values
-    #Define Y from the dataframe degradation input, do normalization
-    #Y_step = degradation_input.Total.values / max(degradation_input.Total.values)
-    # Reshaping is done to go from (n,) to (n,1), which is required by GPyOpt.
-    Y_rounds[k] = np.reshape(degradation_input[k].Total.values,
-             (degradation_input[k].Total.values.shape[0],1))
-
-    '''
     
     # These lines perform the selected operations to the duplicate samples
     # (choose first, choose last, choose the average, do nothing).
     df = compositions_input[k].copy()
     df['Merit'] = degradation_input[k]['Merit'].values
     if duplicate_operation == 'first':
-        df = df.drop_duplicates(subset=materials, keep='first').reset_index()#.drop(
-        #        ['Unnamed: 0','Comments','Sample'],axis=1).sort_values(
-        #        by=materials).reset_index(drop=True)
+        df = df.drop_duplicates(subset=materials, keep='first').reset_index()
     elif duplicate_operation == 'last':
-        df = df.drop_duplicates(subset=materials, keep='last').reset_index()#.drop(
-        #        ['Unnamed: 0','Comments','Sample'],axis=1).sort_values(
-        #        by=materials).reset_index(drop=True)
+        df = df.drop_duplicates(subset=materials, keep='last').reset_index()
     elif duplicate_operation == 'full':
-        df = df#.drop(['Unnamed: 0','Comments','Sample'],axis=1).sort_values(
-        #    by=materials).reset_index(drop=True)
+        df = df
     elif duplicate_operation == 'mean':
-        df = df.groupby(materials).mean().reset_index()#.drop(
-        #['Unnamed: 0'],axis=1).sort_values(
-        #    by=materials).reset_index(drop=True)
+        df = df.groupby(materials).mean().reset_index()
     else:
         raise Exception('The given value for treating duplicate samples is not valid. Give a valid value.')
     # X is a vector of compositions, Y is a vector of merit values.
     X_rounds[k] = df[materials].values
     # Reshaping is done to go from (n,) to (n,1), which is required by GPyOpt.
-    Y_rounds[k] = np.reshape(df['Merit'].values, (df['Merit'].values.shape[0], 1))#np.transpose([df0_full['Merit'].values])
+    Y_rounds[k] = np.reshape(df['Merit'].values, (df['Merit'].values.shape[0], 1))
     
     
     # For each BayesianOp round, we want to include all the data that has been
@@ -253,21 +199,6 @@ for k in range(rounds):
         if j >= k:
             X_step[j] = np.append(X_step[j], X_rounds[k], axis=0)
             Y_step[j] = np.append(Y_step[j], Y_rounds[k], axis=0)
-
-'''
-X_rounds[0]=X_step000
-Y_rounds[0]=Y_step000
-X_step = [np.empty((0,len(materials))) for j in range(rounds)]
-Y_step = [np.empty((0,1)) for j in range(rounds)] # Change (0,1) to (0,2) if multiobjective
-for k in range(rounds):
-    for j in range(rounds):
-        if j >= k:
-            X_step[j] = np.append(X_step[j], X_rounds[k], axis=0)
-            Y_step[j] = np.append(Y_step[j], Y_rounds[k], axis=0)
-
-'''
-#%%
-
     
 # Do the actual Bayesian Optimization.
 x_next = [None for k in range(rounds)]
@@ -300,19 +231,20 @@ for i in range(rounds):
                                             acquisition_jitter = jitter)
     
     
-    #Suggest next points to make
+    #Suggest next points (samples to prepare).
     x_next[i] = BO_batch[i].suggest_next_locations()
     suggestion_df[i] = pd.DataFrame(x_next[i], columns = materials)
     suggestion_df[i]['Total'] = suggestion_df[i].sum(axis = 1)
     suggestion_df[i]['Tolerance Factor'] = tolerance_factor(
             suggestion_df = suggestion_df[i],
             tolerance_factor_bound = None)
-    #BO_batch[i].plot_convergence()
-    #BO_batch[i].plot_convergence()
 
+# Plot and save the results.
 plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batch, materials, X_rounds, x_next, Y_step, X_step)    
 
+print('Results are saved into folder ./Results.')
+
 # Save the model as an backup
-dbfile = open('Backup-model-{date:%Y%m%d%H%M%S}'.format(date=datetime.datetime.now()), 'ab') 
-pickle.dump([BO_batch, suggestion_df, x_next, X_rounds, Y_rounds], dbfile)                      
-dbfile.close()
+# dbfile = open('Backup-model-{date:%Y%m%d%H%M%S}'.format(date=datetime.datetime.now()), 'ab') 
+# pickle.dump([BO_batch, suggestion_df, x_next, X_rounds, Y_rounds], dbfile)                      
+# dbfile.close()
