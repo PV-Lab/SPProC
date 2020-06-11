@@ -51,6 +51,10 @@ folders = [r'/20190606-R1-JT/BMP/RGB/Calibrated/',
            r'/20190711-R1-JT/BMP/RGB/Calibrated/',
            r'/20190723-R1-JT/BMP/RGB/Calibrated/',
            r'/20190809-R1-JT/BMP/RGB/Calibrated/']
+# Run for these folders if you want to see the results for no DFT.
+#folders = [r'/20190606-R1-JT/BMP/RGB/Calibrated/',
+#           r'/20190614-R1-JT/BMP/RGB/Calibrated/']
+
 
 for n in range(len(folders)):
     folders[n] = original_folder + folders[n]

@@ -53,32 +53,30 @@ def triangleplot(surf_points, surf_data, norm, surf_axis_scale = 1, cmap = 'RdBu
         a_p = scatter_points[:,2]
         x_p = 0.5 * ( 2.*b_p+c_p ) / ( a_p+b_p+c_p)
         y_p = 0.5*np.sqrt(3) * c_p / (a_p+b_p+c_p)
-        # create a triangulation out of these points
-        T_p = tri.Triangulation(x_p,y_p)
-
+        
         im3 = ax.scatter(x_p, y_p, s=8, c=scatter_color, cmap=cmap, edgecolors='black', linewidths=.5, alpha=1, zorder=2, norm=norm)
     # plot the contour
-    if surf_levels is not None:
-        im=ax.tricontourf(x,y,T.triangles,v, cmap=cmap, levels=surf_levels)
-    else:
-        im=ax.tricontourf(x,y,T.triangles,v, cmap=cmap)
-    im.set_norm(norm)
-    # create the grid
-    corners = np.array([[0, 0], [1, 0], [0.5,  np.sqrt(3)*0.5]])
-    triangle = tri.Triangulation(corners[:, 0], corners[:, 1])
-    # creating the grid
-    refiner = tri.UniformTriRefiner(triangle)
-    trimesh = refiner.refine_triangulation(subdiv=0)
-    #plotting the mesh
-    im2=ax.triplot(trimesh,'k-', linewidth=0.5)
+    if surf_levels is None:
+    #    im=ax.tricontourf(x,y,T.triangles,v, cmap=cmap, levels=surf_levels)
+    #else:
+        nlevels = 8
+        minvalue = 0
+        if norm.vmin < minvalue:
+            minvalue = norm.vmin
+        if norm.vmin > (minvalue + ((norm.vmax-minvalue)/nlevels)):
+            minvalue = norm.vmin
+        surf_levels = np.arange(minvalue, norm.vmax, (norm.vmax-minvalue)/nlevels)
+        surf_levels = np.round(surf_levels, -int(np.floor(np.log10(norm.vmax))-1))#2))
+        surf_levels = np.append(surf_levels, 2*surf_levels[-1] - surf_levels[-2])
+    im=ax.tricontourf(x,y,T.triangles,v, cmap=cmap, levels=surf_levels)
     
     myformatter=matplotlib.ticker.ScalarFormatter()
     myformatter.set_powerlimits((0,2))
     if cbar_spacing is not None:
-        cbar=plt.colorbar(im, ax=ax, spacing='proportional', ticks=(0,0.2,0.4,0.6,0.8,1))
+        cbar=plt.colorbar(im, ax=ax, spacing=cbar_spacing, ticks=cbar_ticks)
     else:
-        cbar=plt.colorbar(im, ax=ax, format=myformatter)
-    cbar.set_label(cbar_label)#, fontsize=14)
+        cbar=plt.colorbar(im, ax=ax, format=myformatter, spacing=surf_levels, ticks=surf_levels)
+    cbar.set_label(cbar_label)#, labelpad = -0.5)
     plt.axis('off')
     plt.text(0.35,-0.1,'Cs (%)')
     plt.text(0.10,0.54,'FA (%)', rotation=61)
@@ -89,8 +87,21 @@ def triangleplot(surf_points, surf_data, norm, surf_axis_scale = 1, cmap = 'RdBu
     plt.text(0.39, 0.83, '0', rotation=61)
     plt.text(0.96, 0.05, '0', rotation=-61)
     plt.text(0.52, 0.82, '100', rotation=-61)
+    
+    # create the grid
+    corners = np.array([[0, 0], [1, 0], [0.5,  np.sqrt(3)*0.5]])
+    triangle = tri.Triangulation(corners[:, 0], corners[:, 1])
+    # creating the grid
+    refiner = tri.UniformTriRefiner(triangle)
+    trimesh = refiner.refine_triangulation(subdiv=0)
+    #plotting the mesh
+    im2=ax.triplot(trimesh,'k-', linewidth=0.5)
+    
+    
     if saveas:
-        fig.savefig(results_dir + saveas + '.pdf')
+        fig.savefig(results_dir + saveas + '.pdf', transparent = True)
+        fig.savefig(results_dir + saveas + '.svg', transparent = True)
+        fig.savefig(results_dir + saveas + '.png', dpi=300)
     plt.show()
     return fig, ax
 
@@ -162,11 +173,14 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
     original_folder = os.getcwd()
     os.chdir(original_folder)
     
+    ###############################################################################
+    # SAVE RESULTS TO CSV FILES
+    ###############################################################################
     for i in range(rounds):
-        suggestion_df[i].to_csv('Bayesian_suggestion_round_'+str(i)+'.csv', float_format='%.3f')
+        suggestion_df[i].to_csv(results_dir + 'Bayesian_suggestion_round_'+str(i)+'.csv', float_format='%.3f')
         inputs = compositions_input[i]
-        inputs['Merit'] = degradation_input[i]['Merit']
-        inputs=inputs.sort_values('Merit')
+        inputs['Ic (px*min)'] = degradation_input[i]['Merit']
+        inputs=inputs.sort_values('Ic (px*min)')
         inputs=inputs.drop(columns=['Unnamed: 0'])
         inputs.to_csv(results_dir + 'Model_inputs_round_'+str(i)+'.csv', float_format='%.3f')
         # : Here the posterior mean and std_dv+acquisition function are calculated and saved to csvs.
@@ -179,9 +193,9 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
         acq_normalized[i] = (-acq - min(-acq))/(max(-acq - min(-acq)))
     
         inputs2 = pd.DataFrame(points, columns=materials)
-        inputs2['Posterior mean (a.u.)']=posterior_mean[i]
-        inputs2['Posterior std (a.u.)']=posterior_std[i]
-        inputs2['Aqcuisition (a.u.)']=acq_normalized[i]
+        inputs2['Ic (px*min)']=posterior_mean[i]
+        inputs2['Std of Ic (px*min)']=posterior_std[i]
+        inputs2['EIC']=acq_normalized[i]
         inputs2.to_csv(results_dir + 'Model_round_' + str(i) + '.csv', float_format='%.3f')
         
     
@@ -192,34 +206,52 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
     ###############################################################################
     # Let's plot the resulting suggestions. This plot works for 3 materials only.
     # Colorbar scale:
-    scale = 1
+    #scale = 1
     
     # Min and max values for each contour plot are determined and normalization
     # of the color range is calculated.
-    axis_scale = 100000
+    axis_scale = 60 # Units from px*min to px*hour.
     lims = [[np.min(posterior_mean)/axis_scale, np.max(posterior_mean)/axis_scale],
             [np.min(posterior_std)/axis_scale, np.max(posterior_std)/axis_scale],
             [np.min(acq_normalized), np.max(acq_normalized)]] # For mean, std, and acquisition.
-    norm = matplotlib.colors.Normalize(vmin=lims[0][0], vmax=lims[0][1])
     
+    norm = matplotlib.colors.Normalize(vmin=lims[0][0], vmax=lims[0][1])    
     for i in range(rounds):
-        triangleplot(points, posterior_mean[i], norm, surf_axis_scale = axis_scale, cmap = 'RdBu_r',
-                 cbar_label = 'Posterior mean (a.u.)', saveas = 'Posterior-mean-no-grid-round'+str(i))
+        triangleplot(points, posterior_mean[i]/axis_scale, norm, cmap = 'RdBu_r',
+                 cbar_label = r'$I_{c}(\theta)$ (px$\cdot$h)', saveas = 'Modelled-Ic-no-grid-round'+str(i)) #A14
 
 
     norm = matplotlib.colors.Normalize(vmin=lims[1][0], vmax=lims[1][1])
     for i in range(rounds):
-        triangleplot(points, posterior_std[i], norm, surf_axis_scale = axis_scale, cmap = 'RdBu_r',
-                 cbar_label = 'Post. Std.Dev. (a.u.)', saveas = 'Posterior-StdDev-round'+str(i))
+        triangleplot(points, posterior_std[i]/axis_scale, norm, cmap = 'RdBu_r',
+                 cbar_label = r'Std $I_{c}(\theta)$ (px$\cdot$h)', saveas = 'St-Dev-of-modelled-Ic-round'+str(i)) #A14
 
     norm = matplotlib.colors.Normalize(vmin=lims[2][0], vmax=lims[2][1])
     # Shift the colormap (removes the red background that appears with the std colormap)
     orig_cmap = mpl.cm.RdBu
     shifted_cmap = shiftedColorMap(orig_cmap, start=0, midpoint=0.000005, stop=1, name='shifted')
     # Colors of the samples in each round.     
-    newPal = {0:'#8b0000', 1:'#7fcdbb', 2:'#9acd32', 3:'#ff4500', 4: 'k'}
+    newPal = {0:'k', 1:'k', 2:'k', 3:'k', 4: 'k'}#{0:'#8b0000', 1:'#7fcdbb', 2:'#9acd32', 3:'#ff4500', 4: 'k'} #A14
     for i in range(rounds):
-        print('i is ', i)
+        print('Round: ', i) #A14
+        if i==0:
+            # In the first round there is an even distribution.
+            test_data = np.concatenate((points, acq_normalized[i]), axis=1)
+            test_data = test_data[test_data[:,3] != 0]
+            test_data[:,3] = np.ones(test_data[:,3].shape)*0.3
+        else:
+            test_data = np.concatenate((points, acq_normalized[i-1]), axis=1)
+            test_data = test_data[test_data[:,3] != 0]
+        triangleplot(test_data[:,0:3], test_data[:,3], norm,
+                     surf_axis_scale = 1.0, cmap = 'shifted',
+                     cbar_label = r'$EIC(\theta, \beta_{DFT})$', #A14
+                     saveas = 'EIC-with-single-round-samples-round'+str(i), #A14
+                     surf_levels = (0,0.009,0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8,1),
+                     scatter_points=X_rounds[i], scatter_color = newPal[i],
+                     cbar_spacing = 'proportional',
+                     cbar_ticks = (0,0.2,0.4,0.6,0.8,1))
+    for i in range(rounds):
+        print('Round: ', i) #A14
         if i==0:
             # In the first round there is a even distribution.
             test_data = np.concatenate((points, acq_normalized[i]), axis=1)
@@ -230,21 +262,19 @@ def plotBO(rounds, suggestion_df, compositions_input, degradation_input, BO_batc
             test_data = test_data[test_data[:,3] != 0]
         triangleplot(test_data[:,0:3], test_data[:,3], norm,
                      surf_axis_scale = 1.0, cmap = 'shifted',
-                     cbar_label = 'Acquisition Prob. (a.u.)',
-                     saveas = 'Acquisition-round'+str(i)+'-with-colored-samples-from-single-round',
+                     cbar_label = r'$EIC(\theta, \beta_{DFT})$', #A14
+                     saveas = 'EIC-round'+str(i), #A14
                      surf_levels = (0,0.009,0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8,1),
-                     scatter_points=X_rounds[i], scatter_color = newPal[i],
                      cbar_spacing = 'proportional',
                      cbar_ticks = (0,0.2,0.4,0.6,0.8,1))
-    
-    ### Here the posterior mean is plotted together with the samples.
+    #A14
     norm = matplotlib.colors.Normalize(vmin=lims[0][0], vmax=lims[0][1])
     sample_points = np.empty((0,3))
     for i in range(rounds):
-        triangleplot(points, posterior_mean[i], norm,
-                     surf_axis_scale = axis_scale, cmap = 'RdBu_r',
-                     cbar_label = 'Posterior mean (a.u.)',
-                     saveas = 'Posterior-mean-with-colored-samples-round'+str(i),
+        triangleplot(points, posterior_mean[i]/axis_scale, norm,
+                     cmap = 'RdBu_r',
+                     cbar_label = r'$I_{c}(\theta)$ (px$\cdot$h)', #A14
+                     saveas = 'Modelled-Ic-with-samples-round'+str(i), #A14
                      scatter_points=X_step[i],
                      scatter_color = np.ravel(Y_step[i]/axis_scale),
                      cbar_spacing = None, cbar_ticks = None)
