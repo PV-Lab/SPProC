@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec  9 16:51:39 2019
-
-@author: Shreyaa
+@authors: Armi Tiihonen, Felipe Oviedo, Shreyaa Raghavan, Zhe Liu
+MIT Photovoltaics Laboratory
 """
+
 import pandas as pd
 import numpy as np
 import os

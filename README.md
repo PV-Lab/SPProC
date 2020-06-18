@@ -1,4 +1,4 @@
-Campaign-2.0-Bayesian-Opt
+Perovskite BO
 ===========
 ## Description
 
@@ -26,8 +26,6 @@ Run the following terminal commands to setup the package:
 `$ python setup.py install`
 
 `$ pip install -r requirements.txt`
-
-Install pandas seaborn python-ternary (Move this to the requirements.txt file)
 
 Open spyder and run Perovskite_BO/Main.py
 

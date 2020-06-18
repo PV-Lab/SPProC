@@ -1,5 +1,10 @@
+"""
+@authors: 	Armi Tiihonen, Felipe Oviedo, Shreyaa Raghavan, Zhe Liu
+MIT Photovoltaics Laboratory
+"""
 
 #Libraries: seaborn, scipy, pandas, Python 3.XX and GPyOpt are required
+
 import pandas as pd
 import numpy as np
 import os
