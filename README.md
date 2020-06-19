@@ -9,9 +9,9 @@ To install, just clone the following repository and sub-repository:
 
 `$ cd Perovskite_BO`
 
-`$ git clone https://github.com/srags/GPyOpt_DFT.git`
-
 `$ cd GPyOpt_DFT`
+
+`$ git clone https://github.com/srags/GPyOpt_DFT.git`
 
 To install the modified GPyOpt package, create a virtual environment using Anaconda (Optional but recommended setup):
 
