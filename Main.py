@@ -56,27 +56,21 @@ folders = [r'/20190606-R1-JT/BMP/RGB/Calibrated/',
            r'/20190711-R1-JT/BMP/RGB/Calibrated/',
            r'/20190723-R1-JT/BMP/RGB/Calibrated/',
            r'/20190809-R1-JT/BMP/RGB/Calibrated/']
-# Run for these folders if you want to see the results for no DFT.
-#folders = [r'/20190606-R1-JT/BMP/RGB/Calibrated/',
-#           r'/20190614-R1-JT/BMP/RGB/Calibrated/']
-
 
 for n in range(len(folders)):
-    folders[n] = original_folder + folders[n]
-       
+    folders[n] = original_folder + folders[n]     
 
 # Give True if the data is calibrated, and False if the data is raw.
 is_calibrated = True
 # Give True if the data is RGB, and False if the data is LAB.
 is_rgb = True
 
-# Give the materials the compositions of which are being optimized. Usethe the
-# same format than is used in the 'Samples.csv' of the aging tests.
+# Give the materials the compositions of which are being optimized. Use the
+# same format than in the 'Samples.csv' of the aging tests.
 materials = ['CsPbI', 'MAPbI', 'FAPbI']
-# IMPORTANT: Check that the tolerance factor function is modified for the
-# elements you choose!
-# IMPORTANT: The current implementation of solubility/DFT checks works only for 
-# order: ['CsPbI', 'MAPbI', 'FAPbI']!
+# Note: Current implementation of tolerance factor function works only for
+# these materials. Current implementation of solubility/DFT works only for
+# these materials in this order.
 
 # Give the cutoff (in minutes) for analyzing the data. The firs n minutes will
 # be utilized and the rest of the data is dropped off.
@@ -125,7 +119,6 @@ for k in range(rounds):
     merit_area[k] = mean_RGB[k].compute_degradation(method = 'area')
     merit_diff[k] = mean_RGB[k].compute_degradation(method = 'diff_area')
     merit_inv_moment[k] = mean_RGB[k].compute_degradation(method = 'inverted_moment')
-    #merit_dtw[k] = mean_RGB[k].compute_degradation(method='dtw')
     
     #Pick the one that looks best, in this case will do merit_diff_abs
     #Drop the empty slots and prepare the data to be fed into GpyOpt
@@ -144,7 +137,7 @@ os.chdir(original_folder)
 
 ###############################################################################
 # These variables are related to the Bayesian optimization.
-num_cores = 1 #We don't care about parallel run
+num_cores = 1 # Not a parallel run
 composition_total = [0.995, 1] # The sum of the amount of each material will be
 # limited between these values. If you need everything to sum up to 100% within
 # 1%-units accuracy, choose [0.995, 1] (default value). If the code runs too
@@ -152,10 +145,8 @@ composition_total = [0.995, 1] # The sum of the amount of each material will be
 # works only for exactly three materials.
 tolerance_factor_bound = 0.80 # Tolerance factor will be limited above this value.
 tolerance_factor_function = tolerance_factor(suggestion_df = None, 
-                                             tolerance_factor_bound = tolerance_factor_bound) # This function is designed for these elements in this
-# specific order only: materials = ['CsPbI', 'MAPbI', 'FAPbI']
-jitter = 0.01 # How much the code does exploration? Give 0.01 for less
-# exploration and 0.5 for more exploration.
+                                             tolerance_factor_bound = tolerance_factor_bound)
+jitter = 0.01 # The level of exploration.
 
 
 ###############################################################################
@@ -163,21 +154,23 @@ jitter = 0.01 # How much the code does exploration? Give 0.01 for less
 # BEGIN BAYESIAN OPTIMIZATION
 
 # Define the variables and the domain for each
-# One can define here also material- or round-specific parameters. E.g.,
-# tolerance factor constraint is needed only after the first round.
+# One can define here also material- or round-specific parameters.
 bounds = [None for j in range(len(materials))]
+
 for j in range(len(materials)):
     bounds[j] = {'name': materials[j], 'type': 'continuous', 'domain': (0,1)}
+
 X_rounds = [None for j in range(rounds)]
 Y_rounds = [None for j in range(rounds)]
 X_step = [np.empty((0,len(materials))) for j in range(rounds)]
 Y_step = [np.empty((0,1)) for j in range(rounds)] # Change (0,1) to (0,2) if multiobjective
 batch_size = [None for j in range(rounds)]
 constraints = [None for j in range(rounds)]
+
 for k in range(rounds):
     batch_size[k] = len(degradation_input[0])
-    # At the moment, the batch size i.e. the number of suggestions the algorithm gives is the
-    # same as the number of samples that were degraded in the first round!
+    # The batch size i.e. the number of suggestions the algorithm gives is the
+    # same as the number of samples that were degraded in the first round.
     constraints[k] = [{'name': 'constr_1', 'constraint': 'x[:,0] +x[:,1] + x[:,2] - ' + str(composition_total[1])},
                    {'name': 'constr_2', 'constraint': str(composition_total[0])+'-x[:,0] -x[:,1] - x[:,2] '},
                    {'name': 'constr_3', 'constraint': tolerance_factor_function}]
@@ -201,27 +194,25 @@ for k in range(rounds):
     # Reshaping is done to go from (n,) to (n,1), which is required by GPyOpt.
     Y_rounds[k] = np.reshape(df['Merit'].values, (df['Merit'].values.shape[0], 1))
     
-    
-    # For each BayesianOp round, we want to include all the data that has been
+    # For each BayesianOp round, we include only the data that has been
     # collected by that time.
     for j in range(rounds):
         if j >= k:
             X_step[j] = np.append(X_step[j], X_rounds[k], axis=0)
             Y_step[j] = np.append(Y_step[j], Y_rounds[k], axis=0)
     
-# Do the actual Bayesian Optimization.
+# Do the Bayesian Optimization.
 x_next = [None for k in range(rounds)]
 suggestion_df = [None for k in range(rounds)]
 BO_batch = [None for k in range(rounds)]
-
+# These files contain DFT data that is integrated into the optimization loop as
+# a soft constraint.
 DFT_files = ['/phasestability/CsFA/fulldata/CsFA_T300_above.csv', 
              '/phasestability/FAMA/fulldata/FAMA_T300_above.csv', 
              '/phasestability/CsMA/fulldata/CsMA_T300_above.csv'
              ]
-
 for n in range(len(DFT_files)):
     DFT_files[n] = original_folder + DFT_files[n]
-    
 
 for i in range(rounds):
     print('X_step and Y_step for round ' + str(i) + ':', X_step[i], Y_step[i])
@@ -237,9 +228,7 @@ for i in range(rounds):
                                             Y = Y_step[i],
                                             evaluator_type = 'local_penalization',
                                             batch_size = batch_size[i],
-                                            acquisition_jitter = jitter)
-    
-    
+                                            acquisition_jitter = jitter)    
     #Suggest next points (samples to prepare).
     x_next[i] = BO_batch[i].suggest_next_locations()
     suggestion_df[i] = pd.DataFrame(x_next[i], columns = materials)
