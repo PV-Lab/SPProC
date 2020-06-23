@@ -1,4 +1,5 @@
 """
+SPProC: Sequential learning with Physical Probabilistic Constraints
 @authors: 	Armi Tiihonen, Felipe Oviedo, Shreyaa Raghavan, Zhe Liu
 MIT Photovoltaics Laboratory
 """
