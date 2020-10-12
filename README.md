@@ -4,7 +4,9 @@ SPProC: Sequential learning with Physical Probabilistic Constraints
 
 Physics informed batch Bayesian optimization for optimizing perovskite stability. Codes and data are described in the connecting article:
 
-Shijing Sun, Armi Tiihonen, Felipe Oviedo, Zhe Liu, Janak Thapa, Noor Titan P. Hartono, Anuj Gopal, Clio Batali, Alex Encinas, Jason J. Yoo, Ruipeng Li, Zekun Ren, Moungi G. Bawendi, Vladan Stevanovic, John Fisher III, Tonio Buonassisi, "A Physical Data Fusion Approach to Optimize Compositional Stability of Halide Perovskites" (2020), link: https://chemrxiv.org/articles/preprint/A_Physical_Data_Fusion_Approach_to_Optimize_Compositional_Stability_of_Halide_Perovskites/12601997
+Shijing Sun, Armi Tiihonen, Felipe Oviedo, Zhe Liu, Janak Thapa, Noor Titan P. Hartono, Anuj Goyal, Clio Batali, Alex Encinas, Jason J. Yoo, Ruipeng Li, Zekun Ren, Moungi G. Bawendi, Vladan Stevanovic, John Fisher III, Tonio Buonassisi, "A Physical Data Fusion Approach to Optimize Compositional Stability of Halide Perovskites" (2020), link: https://chemrxiv.org/articles/preprint/A_Physical_Data_Fusion_Approach_to_Optimize_Compositional_Stability_of_Halide_Perovskites/12601997
+
+DFT data (in directory "phasestability") is provided by Anuj Goyal.
 
 ## Installation
 To install, just clone the following repository and sub-repository:
