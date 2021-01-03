@@ -2,7 +2,7 @@ SPProC: Sequential learning with Physical Probabilistic Constraints
 ===========
 ## Description
 
-Physics informed batch Bayesian optimization for optimizing perovskite stability. Codes and data are described in the connecting article:
+Physics-informed Bayesian optimization for optimizing perovskite stability. Codes and data are described in the connecting article:
 
 Shijing Sun, Armi Tiihonen, Felipe Oviedo, Zhe Liu, Janak Thapa, Noor Titan P. Hartono, Anuj Goyal, Clio Batali, Alex Encinas, Jason J. Yoo, Ruipeng Li, Zekun Ren, Moungi G. Bawendi, Vladan Stevanovic, John Fisher III, Tonio Buonassisi, "A Physical Data Fusion Approach to Optimize Compositional Stability of Halide Perovskites" (2020), link: https://chemrxiv.org/articles/preprint/A_Physical_Data_Fusion_Approach_to_Optimize_Compositional_Stability_of_Halide_Perovskites/12601997
 
@@ -25,15 +25,13 @@ To install the modified GPyOpt package, create a virtual environment using Anaco
 
 `$ conda activate SPProC`
 
-`$ conda install spyder`
-
 Run the following terminal commands to setup the package:
 
 `$ python setup.py install`
 
 `$ pip install -r requirements.txt`
 
-Open spyder and run SPProC/Main.py
+Run SPProC/Main.py
 
 ## Authors
 ||                    |
